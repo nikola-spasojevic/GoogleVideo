@@ -7,7 +7,7 @@
 #include <QtGui>
 #include <opencv2/ml/ml.hpp>
 
-#define DICTIONARY_SIZE 100
+#define DICTIONARY_SIZE 1500
 #define MIN_FEATURE_SIZE 2000
 #define COUNTOUR_AREA_THRESHOLD 3000
 #define FRAME_FREQ 3
@@ -57,6 +57,8 @@ private:
     Mat foregroundExtraction(Rect roi_rect);
     void querryFrames(vector<float> tfROI);
     void retrievalStage(vector<float> querryVec);
+    void SpatialConsistency(vector<std::pair<int, float> > retrievedframeAglesMap);
+
 
 signals:
 

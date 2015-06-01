@@ -150,32 +150,35 @@ void MainWindow::dictionaryReceived(bool voc)
             int word_count = visualWord_count.at(j);
             qDebug() << "visual word count of " << j << " = " << word_count;
 
-            if(std::find(stop_idxs.begin(), stop_idxs.end(), j) == stop_idxs.end() && word_count != 0)
+            if(std::find(stop_idxs.begin(), stop_idxs.end(), j) == stop_idxs.end())
             {
-                float word_freq = histogramsPerFrame.at(i).at(j) * DICTIONARY_SIZE/featureVec.at(i).size();
-                qDebug() << "word frequency = " << word_freq;
+                if (word_count == 0)
+                {
+                    tf_idf.push_back(0.);
+                }
+                else
+                {
+                    float word_freq = histogramsPerFrame.at(i).at(j) * DICTIONARY_SIZE/featureVec.at(i).size();
+                    qDebug() << "word frequency = " << word_freq;
 
-                float inverse_doc_freq = log(featureVec.size() / (float) word_count);
-                qDebug() << "inverse document frequency = " << inverse_doc_freq;
+                    float inverse_doc_freq = log(featureVec.size() / (float) word_count);
+                    qDebug() << "inverse document frequency = " << inverse_doc_freq;
 
-                float weighted_freq = word_freq * inverse_doc_freq;
-                qDebug() << "tf-idf frequency component = " << weighted_freq;
-                tf_idf.push_back(weighted_freq);
+                    float weighted_freq = word_freq * inverse_doc_freq;
+                    qDebug() << "tf-idf frequency component = " << weighted_freq;
+                    tf_idf.push_back(weighted_freq);
 
-                //for word j, assign frame i as: the word is contained in the following documents
-                invIdxStruct[j].push_back(i);
+                    //for word j, assign frame i as: the word is contained in the following documents
+                    invIdxStruct[j].push_back(i);
+                }
+
             }
         }
 
         tf_idfVectors.push_back(tf_idf);
+
+        qDebug() << "size of a tf-idf container " << i << ": " <<  tf_idf.size();
     }
-
-    qDebug() << "size of a tf-idf container = " << tf_idfVectors.size();
-
-}
-
-void MainWindow::retrievalStage(vector<float> querryVec)
-{
 
 
 
@@ -309,7 +312,7 @@ void MainWindow::Mouse_current_pos()
     }
 
     frame_counter++;
-    qDebug() << frame_counter;
+    qDebug() << "frame counter: " << frame_counter;
     }
 }
 
@@ -325,7 +328,9 @@ void MainWindow::Mouse_released()
     {
         vector<vector<float> > histogramsPerRoi(roiVector.size());
         vector<int> visualWord_count(DICTIONARY_SIZE,0); //number of occurences of frames containg a specific word (feature)
-        vector<float> tfROI;
+        vector<float> tfROI(tf_idfVectors.at(0).size(), 0.);
+
+        qDebug() << "Size of assumed ROI tf-idf vector: " << tfROI.size();
 
         for (int i = 0; i < roiVector.size(); i++)
         {
@@ -346,7 +351,7 @@ void MainWindow::Mouse_released()
             histogramsPerRoi.at(i) = vec;
         }
 
-        //term fuency - inverse document term added to word frequency - tf-idf
+        //term frequency - inverse document term added to word frequency - tf-idf
         for (int i = 0; i < roiVector.size(); i++)
         {
             vector<float> tf_idf;
@@ -356,33 +361,44 @@ void MainWindow::Mouse_released()
                 int word_count = visualWord_count.at(j);
                 qDebug() << "visual word count = " << word_count;
 
-                if(std::find(stop_idxs.begin(), stop_idxs.end(), j) == stop_idxs.end() && word_count != 0)
+                if(std::find(stop_idxs.begin(), stop_idxs.end(), j) == stop_idxs.end())
                 {
-                    float word_freq = histogramsPerRoi.at(i).at(j) * DICTIONARY_SIZE/keypointVector.at(i).size();;
-                    qDebug() << "word frequency = " << word_freq;
+                    if (word_count == 0)
+                    {
+                        tf_idf.push_back(0.);
+                    }
+                    else
+                    {
+                        float word_freq = histogramsPerRoi.at(i).at(j) * DICTIONARY_SIZE/keypointVector.at(i).size();;
+                        qDebug() << "word frequency = " << word_freq;
 
-                    float inverse_doc_freq = log(roiVector.size() / (float) word_count);
-                    qDebug() << "inverse document frequency = " << inverse_doc_freq;
+                        float inverse_doc_freq = log(roiVector.size() / (float) word_count);
+                        qDebug() << "inverse document frequency = " << inverse_doc_freq;
 
-                    float weighted_freq = word_freq * inverse_doc_freq;
-                    qDebug() << "tf-idf frequency component = " << weighted_freq;
-                    tf_idf.push_back(weighted_freq);
+                        float weighted_freq = word_freq * inverse_doc_freq;
+                        qDebug() << "tf-idf frequency component = " << weighted_freq;
+                        tf_idf.push_back(weighted_freq);
+                    }
                 }
             }
 
-            for(int k = 0; k < DICTIONARY_SIZE; k++)
+            qDebug() << "Size of temporary ROI tf-idf vector: " << tf_idf.size();
+
+            for(int k = 0; k < tfROI.size(); k++)
             {
-                tfROI.at(k) =+ tf_idf.at(k);
+                tfROI.at(k) =+ tf_idf.at(k); //accumulate all of the wighted frequncies of all visaul words occuring in all of the ROI querries
                 qDebug() << tf_idf.at(k);
             }
         }
 
-        /*
-        for(int k = 0; k < DICTIONARY_SIZE; k++)
+        //Should check how often certain words appear and average them accroding to that, rather than the size of the entire set
+        qDebug() << "Averaging...";
+        for(int k = 0; k < tfROI.size(); k++) // the inverted file index structure has 10% less members than DICTIONARY_SIZE
         {
-            tfROI.at(k) /= roiVector.size(); //by averaging the histograms, we supress the noise whilst maintaining the dominant words
+            tfROI.at(k) /= roiVector.size(); //by averaging the weighted frequncies , we supress the noise whilst maintaining the dominant words
         }
-        */
+
+        qDebug() << "Averaged!!!";
 
         querryFrames(tfROI);
     }
@@ -508,29 +524,31 @@ Mat MainWindow::foregroundExtraction(Rect roi_rect)
     return output;
 }
 
-void MainWindow::querryFrames(vector<float> tfROI)
+void MainWindow::querryFrames(vector<float> queryVec)
 {
     vector<std::pair<int, float> > retrievedframeAglesMap;
     vector<int> passedFrameIdxs;
     //Traverse through the frames and find ones with a distance beneath a certain thrshold
     //first, find thw non-zero words within the query vector
-    for(int i = 0; i < DICTIONARY_SIZE; i++)
+    for(int i = 0; i < queryVec.size(); i++)
     {
-        if(tfROI.at(i) != 0) // figure out how to avoid close to zero values
+        if(queryVec.at(i) != 0) // figure out how to avoid close to zero values
         {
-            vector<int> qf = invIdxStruct[i];//querrying the inverse index structure, checking which frames are associated with the querrid visual word
+            qDebug() << "index number: " << i;
+            vector<int> qf = invIdxStruct[i];//querrying the inverse index structure, checking which frames are associated with the querried visual word
 
-            for(std::vector<int>::iterator it = qf.begin(); it != qf.end(); it++)//the iterator is a frame index value
+            for(std::vector<int>::iterator it = qf.begin(); it != qf.end(); it++)//the iterator is a frame index value, find which frames contain this specific visual word
             {
-                if(std::find(passedFrameIdxs.begin(), passedFrameIdxs.end(), *it) == passedFrameIdxs.end())
+                if(std::find(passedFrameIdxs.begin(), passedFrameIdxs.end(), *it) == passedFrameIdxs.end())//make sure you havent already traversed through that frame before
                 {
-                    std::pair<int, float> frameidxAngle; //pair of cosine angle value and frame index
+                    std::pair<int, float> frameIdxAngle; //pair of cosine angle value and frame index
                     float fd = 0, norm_q = 0, norm_d = 0;
                     vector<float> docVec = tf_idfVectors.at(*it);
 
-                    for(int c = 0; c < tfROI.size(); c++)
+                    //calculate the cosine distance between the querry vector and the frame vector
+                    for(int c = 0; c < queryVec.size(); c++)
                     {
-                        float q = tfROI.at(c); //querry value
+                        float q = queryVec.at(c); //querry value
                         float d = docVec.at(c);//document value
 
                         fd += q * d;
@@ -538,24 +556,57 @@ void MainWindow::querryFrames(vector<float> tfROI)
                         norm_d += d*d;
                     }
 
+                    //normalise the cosine distance/frequency score
                     fd /= sqrt(norm_q);
                     fd /= sqrt(norm_d);
 
-                    frameidxAngle.first = *it;
-                    frameidxAngle.second = fd;
+                    qDebug() << "Calculated pair: index -> " << *it << ", cosine distace/frequency score -> " << fd;
 
-                    retrievedframeAglesMap.push_back(frameidxAngle);
+                    frameIdxAngle.first = *it;
+                    frameIdxAngle.second = fd;
+
+                    retrievedframeAglesMap.push_back(frameIdxAngle);
                     passedFrameIdxs.push_back(*it);
                 }
             }
         }
     }
 
-    sort(retrievedframeAglesMap.begin(), retrievedframeAglesMap.begin(), HelperFunctions::sort_frameIdxPairs());
+    sort(retrievedframeAglesMap.begin(), retrievedframeAglesMap.end(), HelperFunctions::sort_frameIdxPairs());
 
     for (int k = 0; k < retrievedframeAglesMap.size(); k++)
     {
-        qDebug() << "Object appearing in frames: " << retrievedframeAglesMap.at(k).first;
+        qDebug() << "Object appearing in frames: " << retrievedframeAglesMap.at(k).first << ", by distance: " << retrievedframeAglesMap.at(k).second;
+    }
+
+    SpatialConsistency(retrievedframeAglesMap);
+}
+
+void MainWindow::SpatialConsistency(vector<std::pair<int, float> > retrievedIdxAglesMap)
+{
+    //Rerank the top Ns retrieved keyframes using the spatioal consistency check
+
+    for (int i = 0; i < retrievedIdxAglesMap.size(); i++)
+    {
+        std::pair<int, float> curr_pair = retrievedIdxAglesMap.at(i);
+        int frameIdx =    curr_pair.first;
+        int cosDistance = curr_pair.second;
+
+        vector<KeyPoint> curr_KeypointVector = keypointVector.at(frameIdx);
+        Mat curr_frame = myPlayer->frameFeatures->frameVector.at(frameIdx);
+
+        //reranking the frames based on a measure of spatial consistency
+        //choose 10 random keypoints and calculate how many points there are in a certain radius and check if they're match has a similair number
+
+        //look how similar the k-nearest neighbours are!
+
+        //first, we will traverse through the top 20 roi frames and compare each of they're sptail consistencies with the
+        //look for SIFT correspondecens using homography and RANSAC
+        for(int k = 0; k < )
+
+
+
+
     }
 }
 

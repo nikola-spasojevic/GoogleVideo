@@ -1,7 +1,7 @@
 #ifndef FRAMEFEATURES_H
 #define FRAMEFEATURES_H
 
-#define DICTIONARY_SIZE 100
+#define DICTIONARY_SIZE 1500
 
 #include <QThread>
 #include <QtCore>

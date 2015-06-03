@@ -32,8 +32,8 @@ void FrameFeatures::processFrames()
     //Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
 
         //SIFT
-        //cv::FeatureDetector* featureDetector = new cv::SiftFeatureDetector();
-        //cv::DescriptorExtractor* descriptorExtractor = new cv::SiftDescriptorExtractor();
+        //Ptr<FeatureDetector> detector = new cv::SiftFeatureDetector();
+        //Ptr<DescriptorExtractor> extractor = new cv::SiftDescriptorExtractor();
 
         //ORB
         //cv::FeatureDetector* featureDetector = new OrbFeatureDetector();
@@ -51,9 +51,9 @@ void FrameFeatures::processFrames()
         //Ptr<FeatureDetector> detector = new cv::MserFeatureDetector();
        // Ptr<DescriptorExtractor> extractor = new cv::FREAK;
 
-        //SUFT
-        //cv::FeatureDetector* featureDetector = new cv::SurfFeatureDetector();
-        //cv::DescriptorExtractor* descriptorExtractor = new cv::SurfDescriptorExtractor();
+        //SURF
+        //Ptr<FeatureDetector> detector = new cv::SurfFeatureDetector();
+        //Ptr<DescriptorExtractor> extractor = new SurfDescriptorExtractor();
 
         //SURF + FREAK
         //cv::FeatureDetector* featureDetector = new cv::SurfFeatureDetector();
@@ -72,6 +72,12 @@ void FrameFeatures::processFrames()
 
         //-- Step 1: Detect the keypoints using Detector
         detector->detect(frm, keypoints_scene, mask);
+
+        for (int k = 0; k < keypoints_scene.size(); k++)
+        {
+            float angle = keypoints_scene.at(k).angle;
+            float size = keypoints_scene.at(k).size;
+        }
 
         //-- Step 2: Calculate descriptors (feature vectors)
         extractor->compute(frm, keypoints_scene, descriptors_scene);

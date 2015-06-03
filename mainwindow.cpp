@@ -602,7 +602,7 @@ void MainWindow::SpatialConsistency(vector<std::pair<int, float> > retrievedIdxA
 
         //first, we will traverse through the top 20 roi frames and compare each of they're sptail consistencies with the
         //look for SIFT correspondecens using homography and RANSAC
-        for(int k = 0; k < )
+        //for(int k = 0; k < )
 
 
 
